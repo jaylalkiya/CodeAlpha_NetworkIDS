@@ -47,7 +47,7 @@ def summarise(rows):
         "by_category": category.most_common(),
         "top_signatures": Counter(r["signature"].replace("SENTINEL ", "")
                                   for r in rows).most_common(8),
-        "top_sources": Counter(r["src"].rsplit(":", 1)[0] for r in rows).most_common(6),
+        "top_sources": Counter(r.get("src_ip") for r in rows).most_common(6),
         "timeline": sorted(timeline.items())[-60:],
         "blocked": list(blocked.values()),
         "recent": rows[-25:][::-1],

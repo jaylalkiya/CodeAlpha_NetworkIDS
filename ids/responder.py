@@ -44,6 +44,13 @@ def is_internal(ip):
     return any(addr in net for net in INTERNAL_NETS if net.version == addr.version)
 
 
+def endpoint(ip, port):
+    """'1.2.3.4:80', '[::1]:80', or just the IP for port-less protocols (ICMP)."""
+    if port in (None, ""):
+        return ip
+    return f"[{ip}]:{port}" if ip and ":" in ip else f"{ip}:{port}"
+
+
 def offender_of(alert):
     """The external side of the flow, or None if both ends are internal."""
     for ip in (alert.get("src_ip"), alert.get("dest_ip")):
@@ -93,8 +100,9 @@ class Responder:
             "category": a.get("category"),
             "priority": priority,
             "proto": event.get("proto"),
-            "src": f'{event.get("src_ip")}:{event.get("src_port", "")}',
-            "dst": f'{event.get("dest_ip")}:{event.get("dest_port", "")}',
+            "src_ip": event.get("src_ip"),
+            "src": endpoint(event.get("src_ip"), event.get("src_port")),
+            "dst": endpoint(event.get("dest_ip"), event.get("dest_port")),
             "offender": offender,
             "actions": actions,
         }
