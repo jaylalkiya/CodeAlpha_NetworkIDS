@@ -1,0 +1,34 @@
+SentinelIDS - setup notes (Windows 11)
+======================================
+
+1. Npcap
+   Installed with "WinPcap API-compatible mode". Packet capture works
+   without Administrator rights when Npcap's "Restrict driver access to
+   Administrators only" option is OFF (registry value AdminOnly = 0).
+
+2. Suricata
+   winget install OISF.Suricata      (7.0.10, needs one UAC prompt)
+   Installs to C:\Program Files\Suricata. SentinelIDS does NOT edit the
+   installed suricata.yaml. It passes everything on the command line:
+     -S rules\local.rules        load only the SentinelIDS rules
+     -l logs\                    write eve.json / fast.log in the project
+     --set threshold-file=...    project threshold.config
+     -k none                     ignore checksums (NIC offload makes
+                                 outgoing packets look broken)
+   Suricata is started from its install folder so it finds
+   classification.config and reference.config.
+
+3. Known limitation
+   Live capture on the Npcap LOOPBACK adapter crashes Suricata 7.0.10 on
+   Windows (segfault at startup). Monitor the real network adapter
+   instead (the default), or replay capture files.
+
+4. HOME_NET
+   Defaults to the private ranges 10/8, 172.16/12 and 192.168/16.
+   Override with:  sentinel.py live --home-net "[192.168.1.0/24]"
+
+5. Linux alternative
+   sudo apt install suricata
+   sudo suricata -c /etc/suricata/suricata.yaml -S rules/local.rules -i eth0 -l logs/
+   (the rules are portable; the firewall response would use iptables/nft
+   instead of netsh)

@@ -1,0 +1,45 @@
+# =====================================================================
+#  SentinelIDS custom rules - CodeAlpha Task 4
+#  SID range 1000001-1000099 (local rules)   priority 1 = high, 3 = low
+# =====================================================================
+
+# ---------------------------------------------------------- reconnaissance
+alert icmp any any -> $HOME_NET any (msg:"SENTINEL RECON ICMP ping sweep / flood"; itype:8; detection_filter:track by_src, count 20, seconds 10; classtype:attempted-recon; priority:2; sid:1000001; rev:1;)
+
+alert tcp any any -> $HOME_NET any (msg:"SENTINEL RECON TCP SYN port scan"; flags:S,12; flow:stateless; detection_filter:track by_src, count 25, seconds 5; classtype:attempted-recon; priority:2; sid:1000002; rev:1;)
+
+alert tcp any any -> $HOME_NET any (msg:"SENTINEL RECON TCP NULL scan"; flags:0; flow:stateless; classtype:attempted-recon; priority:2; sid:1000003; rev:1;)
+
+alert tcp any any -> $HOME_NET any (msg:"SENTINEL RECON TCP XMAS scan"; flags:FPU,12; flow:stateless; classtype:attempted-recon; priority:2; sid:1000004; rev:1;)
+
+# ---------------------------------------------------------- brute force
+alert tcp any any -> $HOME_NET 22 (msg:"SENTINEL BRUTEFORCE repeated SSH connection attempts"; flags:S,12; flow:stateless; detection_filter:track by_src, count 6, seconds 60; classtype:attempted-user; priority:1; sid:1000010; rev:1;)
+
+alert tcp any any -> $HOME_NET 3389 (msg:"SENTINEL BRUTEFORCE repeated RDP connection attempts"; flags:S,12; flow:stateless; detection_filter:track by_src, count 6, seconds 60; classtype:attempted-user; priority:1; sid:1000011; rev:1;)
+
+alert ftp $HOME_NET 21 -> any any (msg:"SENTINEL BRUTEFORCE repeated FTP login failures"; flow:from_server,established; content:"530 "; depth:4; detection_filter:track by_dst, count 4, seconds 60; classtype:attempted-user; priority:1; sid:1000012; rev:1;)
+
+# ---------------------------------------------------------- web attacks
+alert http any any -> $HOME_NET any (msg:"SENTINEL WEB SQL injection attempt (UNION SELECT)"; flow:to_server,established; http.uri; content:"union"; nocase; content:"select"; nocase; distance:0; classtype:web-application-attack; priority:1; sid:1000020; rev:1;)
+
+alert http any any -> $HOME_NET any (msg:"SENTINEL WEB SQL injection attempt (tautology)"; flow:to_server,established; http.uri; pcre:"/'\s*or\s*'?\d+'?\s*=\s*'?\d+/i"; classtype:web-application-attack; priority:1; sid:1000021; rev:1;)
+
+alert http any any -> $HOME_NET any (msg:"SENTINEL WEB cross-site scripting attempt"; flow:to_server,established; http.uri; content:"<script"; nocase; classtype:web-application-attack; priority:1; sid:1000022; rev:1;)
+
+alert http any any -> $HOME_NET any (msg:"SENTINEL WEB directory traversal attempt"; flow:to_server,established; http.uri.raw; content:"../"; classtype:web-application-attack; priority:1; sid:1000023; rev:1;)
+
+alert http any any -> $HOME_NET any (msg:"SENTINEL WEB scanner user-agent detected"; flow:to_server,established; http.user_agent; pcre:"/(sqlmap|nikto|nmap|masscan|dirbuster|gobuster)/i"; classtype:web-application-attack; priority:2; sid:1000024; rev:1;)
+
+alert http any any -> any any (msg:"SENTINEL WEB response shows root id output (testmynids.org check)"; flow:to_client,established; http.response_body; content:"uid=0|28|root|29|"; classtype:bad-unknown; priority:1; sid:1000025; rev:1;)
+
+# ---------------------------------------------------------- policy / cleartext
+alert ftp any any -> any 21 (msg:"SENTINEL POLICY cleartext FTP password sent"; flow:to_server,established; content:"PASS "; depth:5; classtype:policy-violation; priority:2; sid:1000030; rev:1;)
+
+alert tcp any any -> $HOME_NET 23 (msg:"SENTINEL POLICY Telnet connection attempt"; flags:S,12; flow:stateless; classtype:policy-violation; priority:2; sid:1000031; rev:1;)
+
+# ---------------------------------------------------------- malware / C2 indicators
+alert tcp any any -> any any (msg:"SENTINEL MALWARE EICAR antivirus test string in traffic"; flow:established; content:"X5O!P%@AP[4|5C|PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!"; classtype:trojan-activity; priority:1; sid:1000040; rev:1;)
+
+alert dns any any -> any any (msg:"SENTINEL MALWARE DNS lookup of a high-risk TLD"; dns.query; pcre:"/\.(xyz|top|tk|zip|mov)$/i"; classtype:bad-unknown; priority:3; sid:1000041; rev:1;)
+
+alert ip $HOME_NET any -> [203.0.113.66,198.51.100.23] any (msg:"SENTINEL MALWARE traffic to blocklisted C2 address"; classtype:trojan-activity; priority:1; sid:1000042; rev:1;)
